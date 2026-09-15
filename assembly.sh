@@ -20,10 +20,10 @@ if [[ "$1" != *.vsc ]]; then
     exit 1
 fi
 
-lines=()                                              # CHANGED: replaced "mapfile -t lines < "$1"" with this block
-while IFS= read -r line || [[ -n "$line" ]]; do        # CHANGED: portable read loop, works on old Bash too
-    lines+=("$line")                                   # CHANGED
-done < "$1"                                             # CHANGED
+lines=()
+while IFS= read -r line || [[ -n "$line" ]]; do
+    lines+=("$line")
+done < "$1"
 
 if [[ ${#lines[@]} -eq 0 ]]; then
     echo "usage: the file is empty – no .bin file is produced"
@@ -37,4 +37,22 @@ if [[ "$n_values" != "0" && "$n_values" != "2" ]]; then
     exit 1
 fi
 
-echo "n_values is '$n_values', proceeding..."
+output="${1%.vsc}.bin"
+
+if [[ "$n_values" == "0" ]]; then
+    if [[ ${#lines[@]} -ne 2 || "${lines[1]}" != "QUIT,0,0" ]]; then
+        echo "usage: when line 1 is 0, line 2 must be exactly QUIT,0,0"
+        exit 1
+    fi
+
+    {
+        printf '\x20'
+        printf '\x00'
+    } > "$output"
+
+    echo "It is a QUIT program"
+    echo "The content of the .bin file is"
+    od -An -tx1 "$output" | tr -s ' ' '\n' | sed '/^$/d'
+
+    exit 0
+fi
